@@ -1,13 +1,11 @@
-"""
-Application entrypoint for the Website Analyzer API.
-Wires configuration, logging, and API routes.
-"""
-
+from pathlib import Path
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
-from app.core.logging import setup_logging
 from app.api.routes import router as api_router
+from app.core.logging import setup_logging
 
+BASE_DIR = Path(__file__).resolve().parent
 
 def create_app() -> FastAPI:
     setup_logging()
@@ -18,12 +16,15 @@ def create_app() -> FastAPI:
         version="1.0.0",
     )
 
-    # Mount API routes under /api
+    # 1️⃣ API routes FIRST
     app.include_router(api_router, prefix="/api", tags=["analysis"])
 
-    @app.get("/health", tags=["health"])
-    async def health_check() -> dict:
-        return {"status": "ok"}
+    # 2️⃣ Static frontend LAST (ABSOLUTE PATH)
+    app.mount(
+        "/",
+        StaticFiles(directory=BASE_DIR / "frontend", html=True),
+        name="static",
+    )
 
     return app
 
