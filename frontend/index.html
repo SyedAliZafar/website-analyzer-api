@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Website Analyzer - Professional Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold">🔍 AI Website Analyzer</h1>
+                </div>
+                <div class="text-sm opacity-90">
+                    Powered by Gemini AI
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Input Section -->
+        <div class="bg-white rounded-lg card-shadow p-8 mb-8">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Analyze Your Website</h2>
+            <p class="text-gray-600 mb-6">Get instant AI-powered insights on performance, SEO, and content quality</p>
+            
+            <div class="flex flex-col md:flex-row gap-4">
+                <input 
+                    type="url" 
+                    id="urlInput" 
+                    placeholder="https://example.com" 
+                    class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none"
+                    value="https://www.dustydeco.com"
+                />
+                <button 
+                    id="analyzeBtn" 
+                    class="gradient-bg text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    onclick="startAnalysis()"
+                >
+                    🚀 Start Analysis
+                </button>
+            </div>
+            
+            <div class="flex gap-4 mt-4">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="desktopCheck" checked class="w-4 h-4 text-purple-600 rounded">
+                    <span class="text-gray-700">🖥️ Desktop</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="mobileCheck" checked class="w-4 h-4 text-purple-600 rounded">
+                    <span class="text-gray-700">📱 Mobile</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingSection" class="hidden bg-white rounded-lg card-shadow p-8 mb-8">
+            <div class="text-center">
+                <div class="inline-block animate-pulse">
+                    <svg class="w-16 h-16 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-semibold text-gray-900 mt-4">Analyzing Website...</h3>
+                <p class="text-gray-600 mt-2">This may take 15-30 seconds</p>
+                <div class="mt-6 max-w-md mx-auto">
+                    <div class="bg-gray-200 rounded-full h-2">
+                        <div id="progressBar" class="gradient-bg h-2 rounded-full progress-bar" style="width: 0%"></div>
+                    </div>
+                    <p id="progressText" class="text-sm text-gray-600 mt-2">Initializing...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            
+            <!-- Overall Score -->
+            <div class="bg-white rounded-lg card-shadow p-8 mb-8 text-center">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Overall Score</h2>
+                <div class="gradient-bg text-white rounded-full w-32 h-32 flex items-center justify-center mx-auto">
+                    <span id="overallScore" class="text-5xl font-bold">0</span>
+                </div>
+                <p class="text-gray-600 mt-4">Website: <span id="analyzedUrl" class="font-semibold"></span></p>
+            </div>
+
+            <!-- AI Insights -->
+            <div id="aiInsightsSection" class="bg-white rounded-lg card-shadow p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">🤖 AI-Powered Insights</h2>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+                    <h3 class="font-semibold text-blue-900 mb-2">📝 Executive Summary</h3>
+                    <p id="aiSummary" class="text-blue-800"></p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                            <span class="text-green-500 mr-2">✅</span> Strengths
+                        </h3>
+                        <ul id="aiStrengths" class="space-y-2"></ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                            <span class="text-red-500 mr-2">⚠️</span> Weaknesses
+                        </h3>
+                        <ul id="aiWeaknesses" class="space-y-2"></ul>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                        <span class="text-yellow-500 mr-2">💡</span> Quick Wins
+                    </h3>
+                    <ul id="aiQuickWins" class="space-y-2"></ul>
+                </div>
+
+                <div class="mt-6 bg-purple-50 border-l-4 border-purple-500 p-4">
+                    <h3 class="font-semibold text-purple-900 mb-2">📈 Strategic Recommendations</h3>
+                    <p id="aiStrategic" class="text-purple-800"></p>
+                </div>
+            </div>
+
+            <!-- Device Tabs -->
+            <div class="bg-white rounded-lg card-shadow mb-8">
+                <div class="border-b border-gray-200">
+                    <nav class="flex -mb-px">
+                        <button id="desktopTab" class="tab-btn py-4 px-6 text-center border-b-2 font-medium text-sm" onclick="switchTab('desktop')">
+                            🖥️ Desktop Analysis
+                        </button>
+                        <button id="mobileTab" class="tab-btn py-4 px-6 text-center border-b-2 font-medium text-sm" onclick="switchTab('mobile')">
+                            📱 Mobile Analysis
+                        </button>
+                    </nav>
+                </div>
+
+                <div id="desktopContent" class="p-8">
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold mb-4">⚡ Performance</h3>
+                            <canvas id="desktopPerfGauge" width="200" height="200"></canvas>
+                            <div id="desktopPerfMetrics" class="mt-4 space-y-1 text-sm"></div>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold mb-4">🎯 SEO</h3>
+                            <canvas id="desktopSeoGauge" width="200" height="200"></canvas>
+                            <div id="desktopSeoDetails" class="mt-4 space-y-1 text-sm"></div>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold mb-4">📝 Content</h3>
+                            <div id="desktopContentMetrics" class="mt-4 space-y-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-bold mb-4">💡 Recommendations</h3>
+                        <div id="desktopRecommendations"></div>
+                    </div>
+                </div>
+
+                <div id="mobileContent" class="p-8 hidden">
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold mb-4">⚡ Performance</h3>
+                            <canvas id="mobilePerfGauge" width="200" height="200"></canvas>
+                            <div id="mobilePerfMetrics" class="mt-4 space-y-1 text-sm"></div>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold mb-4">🎯 SEO</h3>
+                            <canvas id="mobileSeoGauge" width="200" height="200"></canvas>
+                            <div id="mobileSeoDetails" class="mt-4 space-y-1 text-sm"></div>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold mb-4">📝 Content</h3>
+                            <div id="mobileContentMetrics" class="mt-4 space-y-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-bold mb-4">💡 Recommendations</h3>
+                        <div id="mobileRecommendations"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="flex gap-4">
+                <button onclick="exportJSON()" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all">
+                    📄 Export JSON
+                </button>
+                <button onclick="location.reload()" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-all">
+                    🔄 New Analysis
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        let currentResult = null;
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-purple-600', 'text-purple-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            if (tab === 'desktop') {
+                document.getElementById('desktopTab').classList.add('border-purple-600', 'text-purple-600');
+                document.getElementById('desktopContent').classList.remove('hidden');
+                document.getElementById('mobileContent').classList.add('hidden');
+            } else {
+                document.getElementById('mobileTab').classList.add('border-purple-600', 'text-purple-600');
+                document.getElementById('mobileContent').classList.remove('hidden');
+                document.getElementById('desktopContent').classList.add('hidden');
+            }
+        }
+
+        function createGauge(canvasId, score) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [score, 100 - score],
+                        backgroundColor: [
+                            score >= 90 ? '#10b981' :
+                            score >= 70 ? '#3b82f6' :
+                            score >= 50 ? '#f59e0b' : '#ef4444',
+                            '#e5e7eb'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                },
+                plugins: [{
+                    id: 'text',
+                    beforeDraw: function(chart) {
+                        const width = chart.width;
+                        const height = chart.height;
+                        const ctx = chart.ctx;
+                        ctx.restore();
+                        const fontSize = (height / 100).toFixed(2);
+                        ctx.font = fontSize + "em sans-serif";
+                        ctx.textBaseline = "middle";
+                        const text = Math.round(score);
+                        const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                        const textY = height / 2;
+                        ctx.fillText(text, textX, textY);
+                        ctx.save();
+                    }
+                }]
+            });
+        }
+
+        async function startAnalysis() {
+            const url = document.getElementById('urlInput').value;
+            const desktop = document.getElementById('desktopCheck').checked;
+            const mobile = document.getElementById('mobileCheck').checked;
+
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+
+            if (!desktop && !mobile) {
+                alert('Please select at least one device type');
+                return;
+            }
+
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('loadingSection').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+
+            try {
+                // Submit analysis
+                const response = await fetch(`${API_URL}/api/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: url,
+                        analyze_desktop: desktop,
+                        analyze_mobile: mobile
+                    })
+                });
+
+                const data = await response.json();
+                const analysisId = data.id;
+
+                // Poll for results
+                let progress = 0;
+                const pollInterval = setInterval(async () => {
+                    progress += 2;
+                    document.getElementById('progressBar').style.width = Math.min(progress, 95) + '%';
+                    document.getElementById('progressText').innerText = 'Analyzing website...';
+
+                    const resultResponse = await fetch(`${API_URL}/api/analyze/${analysisId}`);
+                    const result = await resultResponse.json();
+
+                    if (result.status === 'completed') {
+                        clearInterval(pollInterval);
+                        document.getElementById('progressBar').style.width = '100%';
+                        document.getElementById('progressText').innerText = 'Complete!';
+                        
+                        setTimeout(() => {
+                            displayResults(result);
+                        }, 500);
+                    } else if (result.status === 'failed') {
+                        clearInterval(pollInterval);
+                        alert('Analysis failed: ' + result.error_message);
+                        document.getElementById('analyzeBtn').disabled = false;
+                        document.getElementById('loadingSection').classList.add('hidden');
+                    }
+                }, 1000);
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+                document.getElementById('analyzeBtn').disabled = false;
+                document.getElementById('loadingSection').classList.add('hidden');
+            }
+        }
+
+        function displayResults(result) {
+            currentResult = result;
+            
+            document.getElementById('loadingSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.remove('hidden');
+            document.getElementById('analyzeBtn').disabled = false;
+
+            // Overall score
+            document.getElementById('overallScore').innerText = result.overall_score;
+            document.getElementById('analyzedUrl').innerText = result.url;
+
+            // AI Insights
+            if (result.ai_insights) {
+                const ai = result.ai_insights;
+                document.getElementById('aiSummary').innerText = ai.summary;
+                
+                document.getElementById('aiStrengths').innerHTML = ai.strengths
+                    .map(s => `<li class="flex items-start"><span class="text-green-500 mr-2">•</span><span class="text-gray-700">${s}</span></li>`)
+                    .join('');
+                
+                document.getElementById('aiWeaknesses').innerHTML = ai.weaknesses
+                    .map(w => `<li class="flex items-start"><span class="text-red-500 mr-2">•</span><span class="text-gray-700">${w}</span></li>`)
+                    .join('');
+                
+                document.getElementById('aiQuickWins').innerHTML = ai.quick_wins
+                    .map(q => `<li class="flex items-start"><span class="text-yellow-500 mr-2">💡</span><span class="text-gray-700">${q}</span></li>`)
+                    .join('');
+                
+                document.getElementById('aiStrategic').innerText = ai.strategic_recommendations;
+            }
+
+            // Desktop analysis
+            if (result.desktop) {
+                displayDeviceAnalysis('desktop', result.desktop);
+                document.getElementById('desktopTab').classList.remove('hidden');
+                switchTab('desktop');
+            }
+
+            // Mobile analysis
+            if (result.mobile) {
+                displayDeviceAnalysis('mobile', result.mobile);
+                document.getElementById('mobileTab').classList.remove('hidden');
+                if (!result.desktop) switchTab('mobile');
+            }
+        }
+
+        function displayDeviceAnalysis(device, data) {
+            // Performance gauge
+            createGauge(`${device}PerfGauge`, data.performance.score);
+            document.getElementById(`${device}PerfMetrics`).innerHTML = `
+                <div class="text-gray-600">FCP: ${data.performance.first_contentful_paint?.toFixed(2)}s</div>
+                <div class="text-gray-600">LCP: ${data.performance.largest_contentful_paint?.toFixed(2)}s</div>
+                <div class="text-gray-600">TTI: ${data.performance.time_to_interactive?.toFixed(2)}s</div>
+            `;
+
+            // SEO gauge
+            createGauge(`${device}SeoGauge`, data.seo.score);
+            document.getElementById(`${device}SeoDetails`).innerHTML = `
+                <div class="text-gray-600">Title: ${data.seo.title_length} chars ${data.seo.title_length >= 30 && data.seo.title_length <= 60 ? '✅' : '❌'}</div>
+                <div class="text-gray-600">Meta Desc: ${data.seo.meta_description_length} chars ${data.seo.meta_description_length >= 120 && data.seo.meta_description_length <= 160 ? '✅' : '❌'}</div>
+                <div class="text-gray-600">H1 Tags: ${data.seo.h1_tags.length} ${data.seo.h1_tags.length === 1 ? '✅' : '❌'}</div>
+                <div class="text-gray-600">Alt Tags Missing: ${data.seo.image_alt_tags_missing}/${data.seo.total_images}</div>
+            `;
+
+            // Content metrics
+            document.getElementById(`${device}ContentMetrics`).innerHTML = `
+                <div class="bg-gray-50 p-3 rounded"><span class="font-semibold">Words:</span> ${data.content.word_count.toLocaleString()}</div>
+                <div class="bg-gray-50 p-3 rounded"><span class="font-semibold">Paragraphs:</span> ${data.content.paragraph_count}</div>
+                <div class="bg-gray-50 p-3 rounded"><span class="font-semibold">Readability:</span> ${data.content.readability_score}/100</div>
+                <div class="bg-gray-50 p-3 rounded"><span class="font-semibold">Internal Links:</span> ${data.content.internal_links}</div>
+            `;
+
+            // Recommendations
+            const highPriority = data.recommendations.filter(r => r.priority === 'high');
+            const mediumPriority = data.recommendations.filter(r => r.priority === 'medium');
+            
+            let recsHTML = '';
+            
+            if (highPriority.length > 0) {
+                recsHTML += '<h4 class="font-semibold text-red-600 mb-2">🔴 High Priority</h4>';
+                highPriority.forEach(rec => {
+                    recsHTML += `
+                        <div class="border-l-4 border-red-500 bg-red-50 p-4 mb-3">
+                            <div class="font-semibold text-gray-900">${rec.category}: ${rec.issue}</div>
+                            <div class="text-sm text-gray-700 mt-1"><strong>💡 Suggestion:</strong> ${rec.suggestion}</div>
+                            <div class="text-sm text-gray-600 mt-1"><strong>📈 Impact:</strong> ${rec.impact}</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (mediumPriority.length > 0) {
+                recsHTML += '<h4 class="font-semibold text-yellow-600 mb-2 mt-4">🟡 Medium Priority</h4>';
+                mediumPriority.forEach(rec => {
+                    recsHTML += `
+                        <div class="border-l-4 border-yellow-500 bg-yellow-50 p-4 mb-3">
+                            <div class="font-semibold text-gray-900">${rec.category}: ${rec.issue}</div>
+                            <div class="text-sm text-gray-700 mt-1"><strong>💡 Suggestion:</strong> ${rec.suggestion}</div>
+                            <div class="text-sm text-gray-600 mt-1"><strong>📈 Impact:</strong> ${rec.impact}</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById(`${device}Recommendations`).innerHTML = recsHTML;
+        }
+
+        function exportJSON() {
+            const dataStr = JSON.stringify(currentResult, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `website-analysis-${Date.now()}.json`;
+            link.click();
+        }
+
+        // Initialize first tab
+        switchTab('desktop');
+    </script>
+</body>
+</html>
