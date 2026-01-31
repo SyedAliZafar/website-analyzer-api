@@ -344,7 +344,7 @@
                 });
 
                 const data = await response.json();
-                const analysisId = data.id;
+                const analysisId = data.analysis_id;  // ✅ Correct;
 
                 // Poll for results
                 let progress = 0;

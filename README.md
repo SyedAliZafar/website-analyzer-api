@@ -72,3 +72,48 @@ app/
 ├── api/
 │   └── routes.py
 └── main.py
+
+
+
+🔐 Environment Variables
+
+Create a .env file:
+
+PAGESPEED_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here
+
+Both keys are optional. The application will run with intelligent fallbacks.
+
+▶️ Running the App
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+Swagger UI:
+http://localhost:8000/docs
+
+📌 Tech Stack
+
+FastAPI
+
+Pydantic
+
+httpx
+
+BeautifulSoup
+
+Google PageSpeed Insights API
+
+Google Gemini API
+
+🧪 Philosophy
+
+This project prioritizes:
+
+Explicit architecture
+
+Testability
+
+Clean separation of concerns
+
+Real-world production patterns

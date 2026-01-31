@@ -28,7 +28,10 @@ class GeminiAnalyzer:
 
         try:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel("gemini-pro")
+            #self.model = genai.GenerativeModel("gemini-pro")
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
+# or use 'gemini-1.5-pro' for better quality but slower
+
             logger.info("Gemini AI initialized successfully")
         except Exception as exc:
             logger.error(f"Failed to initialize Gemini AI: {exc}")
