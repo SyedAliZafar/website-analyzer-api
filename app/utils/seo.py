@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 from app.models.schemas import SEOAnalysis
-
+from typing import Optional
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -58,12 +58,12 @@ def analyze_seo(html: str, base_url: str) -> SEOAnalysis:
 # Internals (pure helpers)
 # ---------------------------------------------------------------------------
 
-def _get_title(soup: BeautifulSoup) -> str | None:
+def _get_title(soup: BeautifulSoup) -> Optional[str]:
     tag = soup.title
     return tag.string.strip() if tag and tag.string else None
 
 
-def _get_meta_description(soup: BeautifulSoup) -> str | None:
+def _get_meta_description(soup: BeautifulSoup) -> Optional[str]:
     tag = soup.find("meta", attrs={"name": "description"})
     return tag.get("content", "").strip() if tag else None
 
@@ -72,14 +72,14 @@ def _get_headings(soup: BeautifulSoup, tag_name: str) -> List[str]:
     return [tag.get_text(strip=True) for tag in soup.find_all(tag_name)]
 
 
-def _get_canonical_url(soup: BeautifulSoup, base_url: str) -> str | None:
+def _get_canonical_url(soup: BeautifulSoup, base_url: str) -> Optional[str]:
     tag = soup.find("link", rel="canonical")
     if tag and tag.get("href"):
         return urljoin(base_url, tag["href"])
     return None
 
 
-def _get_meta_robots(soup: BeautifulSoup) -> str | None:
+def _get_meta_robots(soup: BeautifulSoup) -> Optional[str]:
     tag = soup.find("meta", attrs={"name": "robots"})
     return tag.get("content") if tag else None
 
@@ -106,10 +106,10 @@ def _analyze_image_alt_tags(soup: BeautifulSoup) -> tuple[int, int]:
 
 def _calculate_seo_score(
     *,
-    title: str | None,
-    meta_description: str | None,
+    title: Optional[str],
+    meta_description: Optional[str],
     h1_count: int,
-    canonical_url: str | None,
+    canonical_url: Optional[str],
     missing_alt: int,
     total_images: int,
 ) -> float:

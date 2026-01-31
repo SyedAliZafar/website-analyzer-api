@@ -6,7 +6,7 @@ Loads environment variables from .env and system environment.
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
-
+from typing import Optional
 
 class Settings(BaseSettings):
     # Application
@@ -14,8 +14,11 @@ class Settings(BaseSettings):
     environment: str = Field(default="development")
 
     # API Keys
-    gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
-    pagespeed_api_key: str | None = Field(default=None, alias="PAGESPEED_API_KEY")
+
+
+    gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
+    pagespeed_api_key: Optional[str] = Field(default=None, alias="PAGESPEED_API_KEY")
+
 
     # Server
     host: str = "0.0.0.0"
