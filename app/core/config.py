@@ -8,17 +8,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from typing import Optional
 
+
 class Settings(BaseSettings):
     # Application
     app_name: str = "Website Analyzer API"
     environment: str = Field(default="development")
 
-    # API Keys
-
-
-    gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
-    pagespeed_api_key: Optional[str] = Field(default=None, alias="PAGESPEED_API_KEY")
-
+    # API Keys (will auto-match GEMINI_API_KEY and PAGESPEED_API_KEY from .env)
+    gemini_api_key: Optional[str] = Field(default=None)
+    pagespeed_api_key: Optional[str] = Field(default=None)
 
     # Server
     host: str = "0.0.0.0"
@@ -30,7 +28,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        case_sensitive=False,
+        case_sensitive=False,  # This allows GEMINI_API_KEY to match gemini_api_key
         extra="ignore",
     )
 

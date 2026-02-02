@@ -1,41 +1,34 @@
-"""
-Gemini AI service for generating high-level website insights.
-Provides graceful fallback when API key is not configured or errors occur.
-"""
-
 import json
-import asyncio
+import re
 from typing import Optional
 
-import google.generativeai as genai
-
-from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.core.deepseek_client import get_client, DEEPSEEK_API_URL
 from app.models.schemas import DeviceAnalysis, AIInsights
 
 logger = get_logger(__name__)
-settings = get_settings()
 
 
 class GeminiAnalyzer:
+    """
+    Legacy name kept intentionally.
+    Backend = DeepSeek
+    """
+
     def __init__(self) -> None:
-        self.api_key = settings.gemini_api_key
-        self.model = None
+        self.model = "deepseek-chat"
+        logger.info("🧠 GeminiAnalyzer (DeepSeek backend) initialized")
 
-        if not self.api_key:
-            logger.warning("GEMINI_API_KEY not configured. AI insights will be basic.")
-            return
+    def _extract_json(self, text: str) -> dict:
+        """
+        Extract first valid JSON object from LLM output.
+        Handles markdown, prose, and formatting noise.
+        """
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if not match:
+            raise ValueError("No JSON object found in AI response")
 
-        try:
-            genai.configure(api_key=self.api_key)
-            #self.model = genai.GenerativeModel("gemini-pro")
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
-# or use 'gemini-1.5-pro' for better quality but slower
-
-            logger.info("Gemini AI initialized successfully")
-        except Exception as exc:
-            logger.error(f"Failed to initialize Gemini AI: {exc}")
-            self.model = None
+        return json.loads(match.group())
 
     async def generate_insights(
         self,
@@ -44,101 +37,57 @@ class GeminiAnalyzer:
         mobile: Optional[DeviceAnalysis],
         overall_score: float,
     ) -> AIInsights:
-        """
-        Generate AI-powered insights using Gemini.
-        Falls back to basic insights if Gemini is unavailable.
-        """
 
-        if not self.model:
-            return self._fallback_insights(overall_score)
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a senior website performance and SEO consultant. "
+                        "Return ONLY valid JSON."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": self._build_prompt(url, overall_score),
+                },
+            ],
+            "temperature": 0.3,
+        }
 
         try:
-            prompt = self._build_prompt(url, desktop, mobile, overall_score)
+            client = await get_client()
+            async with client:
+                response = await client.post(DEEPSEEK_API_URL, json=payload)
+                response.raise_for_status()
 
-            logger.info("Sending request to Gemini AI")
-            response = await asyncio.to_thread(
-                self.model.generate_content,
-                prompt,
-            )
+                data = response.json()
+                content = data["choices"][0]["message"]["content"].strip()
 
-            response_text = response.text.strip()
-            response_text = self._strip_code_fences(response_text)
+                parsed = self._extract_json(content)
+                return AIInsights(**parsed)
 
-            insights_data = json.loads(response_text)
-            return AIInsights(**insights_data)
+        except Exception:
+            logger.error("❌ AI failed", exc_info=True)
+            return self._fallback(overall_score)
 
-        except Exception as exc:
-            logger.error(f"Gemini analysis failed: {exc}")
-            return self._fallback_insights(overall_score)
-
-    # ---------------------------------------------------------------------
-    # Internal helpers
-    # ---------------------------------------------------------------------
-
-    def _fallback_insights(self, overall_score: float) -> AIInsights:
+    def _fallback(self, score: float) -> AIInsights:
         return AIInsights(
-            summary=f"Website scored {overall_score}/100. Core metrics collected successfully.",
-            strengths=["Performance, SEO, and content metrics analyzed"],
-            weaknesses=["AI-generated insights unavailable"],
-            quick_wins=["Review performance and SEO recommendations below"],
-            strategic_recommendations=(
-                "Enable Gemini AI by configuring GEMINI_API_KEY to receive "
-                "advanced strategic insights and recommendations."
-            ),
+            summary=f"Website scored {score}/100. AI unavailable.",
+            strengths=["Performance data collected"],
+            weaknesses=["AI analysis failed"],
+            quick_wins=["Review performance metrics"],
+            strategic_recommendations="Check AI configuration.",
         )
 
-    def _build_prompt(
-        self,
-        url: str,
-        desktop: Optional[DeviceAnalysis],
-        mobile: Optional[DeviceAnalysis],
-        overall_score: float,
-    ) -> str:
-        sections: list[str] = []
-
-        if desktop:
-            sections.append(
-                f"""
-DESKTOP ANALYSIS:
-- Performance Score: {desktop.performance.score}/100
-- SEO Score: {desktop.seo.score}/100
-- FCP: {desktop.performance.first_contentful_paint}s
-- LCP: {desktop.performance.largest_contentful_paint}s
-- Word Count: {desktop.content.word_count}
-- H1 Tags: {len(desktop.seo.h1_tags)}
-- Missing Alt Tags: {desktop.seo.image_alt_tags_missing}/{desktop.seo.total_images}
-"""
-            )
-
-        if mobile:
-            sections.append(
-                f"""
-MOBILE ANALYSIS:
-- Performance Score: {mobile.performance.score}/100
-- SEO Score: {mobile.seo.score}/100
-- CLS: {mobile.performance.cumulative_layout_shift}
-- Time to Interactive: {mobile.performance.time_to_interactive}s
-"""
-            )
-
-        context = "\n".join(sections)
-
+    def _build_prompt(self, url: str, score: float) -> str:
         return f"""
-You are an expert website analyst.
+Website URL: {url}
+Overall Score: {score}/100
 
-Website: {url}
-Overall Score: {overall_score}/100
+Return ONLY valid JSON in this format:
 
-{context}
-
-Provide:
-1. A 2–3 sentence executive summary
-2. Top 3 strengths
-3. Top 3 weaknesses
-4. 3–5 quick wins
-5. One-paragraph strategic recommendation
-
-Respond ONLY as valid JSON with this structure:
 {{
   "summary": "...",
   "strengths": ["..."],
@@ -147,9 +96,3 @@ Respond ONLY as valid JSON with this structure:
   "strategic_recommendations": "..."
 }}
 """
-
-    @staticmethod
-    def _strip_code_fences(text: str) -> str:
-        if text.startswith("```"):
-            text = text.split("```", 2)[1]
-        return text.strip()
